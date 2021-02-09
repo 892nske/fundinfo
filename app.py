@@ -22,6 +22,7 @@ app.layout = html.Div([
     id="dropdown-ticker",
     options=ticlist,
     value=['QQQ'],
+    clearable=False,
     multi=True
 ),
 html.Button(id="submit-button", children="表示"),
@@ -47,7 +48,7 @@ def update_output(n_clicks,ticker):
         pdv = pdr.DataReader(tic, 'yahoo', start, end)
         pdv.drop(columns=['High', 'Low', 'Open', 'Close', 'Volume'], inplace=True)
         pdv.columns = [tic]
-        pd_data = pd_data.join(pdv)
+        pd_data = pd_data.join(pdv, how='inner')
 
     pd_data.drop(columns=['base'], inplace=True)
     pd_ratio = pd_data/pd_data.iloc[0,:]
