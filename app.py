@@ -21,7 +21,7 @@ for tc in tickers_data.itertuples():
     ticlist.append({'label': tc[1], 'value': tc[1]})
 
 # 投信一覧を読み込み
-funds_data = pd.read_csv('fundf.csv',index_col=0)
+funds_data = pd.read_csv('fundf_c.csv',index_col=0)
 fdlist = []
 for fd in funds_data.itertuples():
     fdlist.append({'label': fd[1], 'value': fd[2]})
@@ -103,37 +103,28 @@ def update_output(n_clicks,ticker):
 )
 def update_output(n_clicks,funds):
     # データ取得
-    ticker = ['QQQ','SPY','VTI','GLD']
+    # funds = ['JP90C0008CH5','JP90C0008CJ1','JP90C0008CQ6']
     start = datetime.date(2018, 1, 1)
     end = datetime.date(2020, 12, 31)
     url_base = "https://toushin-lib.fwg.ne.jp/FdsWeb/FDST030000?isinCd={isin}"
     dl_base = "https://toushin-lib.fwg.ne.jp"
     #一つだけロードしベースとする
-    # pd_data = pdr.DataReader(ticker[0], 'yahoo', start, end)
-    # pd_data.drop(columns=['High', 'Low', 'Open', 'Close', 'Volume'], inplace=True)
-    # pd_data.columns = ['base']
+    p = pd.read_csv(funds[0]+'.csv', encoding="shift-jis")
+    p['date'] = pd.to_datetime(p['年月日'], format='%Y年%m月%d日')
+    p.index = p['date']
+    p.drop(columns=['年月日','純資産総額（百万円）','分配金','決算期','date'], inplace=True)
+    p.columns=['base']
 
     for fc in funds:
-        url = url_base.format(isin=fc)
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, "html.parser")
-        dl = soup.find_all('a',{"id":"download"})
-        dl_url = dl_base+dl[0].get('href')
-        res = requests.get(dl_url)
-        saveFileName = isin + ".csv"
-        with open(saveFileName, 'wb') as saveFile:
-            saveFile.write(res.content)
-        time.sleep(1)
+        tmp = pd.read_csv(fc+'.csv', encoding="shift-jis")
+        tmp.index = pd.to_datetime(tmp['年月日'], format='%Y年%m月%d日')
+        tmp.drop(columns=['年月日','純資産総額（百万円）','分配金','決算期'], inplace=True)
+        tmp.columns=[fc]
+        p = p.join(tmp, how='inner')
 
-    for tic in ticker:
-        pdv = pdr.DataReader(tic, 'yahoo', start, end)
-        pdv.drop(columns=['High', 'Low', 'Open', 'Close', 'Volume'], inplace=True)
-        pdv.columns = [tic]
-        pd_data = pd_data.join(pdv, how='inner')
-
-    pd_data.drop(columns=['base'], inplace=True)
-    pd_ratio = pd_data/pd_data.iloc[0,:]
-    pd_ratio['日付'] = pd_ratio.index
+    p.drop(columns=['base'], inplace=True)
+    pr = p/p.iloc[0,:]
+    pr['日付'] = pr.index
 
     # グラフの記述
     fig = go.Figure(layout=go.Layout(
@@ -146,12 +137,12 @@ def update_output(n_clicks,funds):
         )
     
     # 価格グラフ
-    for tc in ticker:
+    for fc in funds:
         fig.add_traces(go.Scatter(
-            x = pd_ratio['日付'],
-            y = pd_ratio[tc],
+            x = pr['日付'],
+            y = pr[fc],
             mode='lines',
-            name=tc,
+            name=fc,
             # marker_color='rgba(255, 182, 193, .9)'
         ))
 
